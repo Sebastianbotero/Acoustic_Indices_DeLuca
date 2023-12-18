@@ -389,7 +389,7 @@ EAindeces<-replace
 div<-c("Hill_0" , "Hill_1", "NMDS1")
 
 corr<-function(dat,EAindeces,div){
-  Corr_results<-data.frame(GroundDiv=NULL, IndCom=NULL, Index=NULL ,Time=NULL,AggStra=NULL, rho=NULL,p=NULL,up=NULL,low=NULL)
+  Corr_results<-data.frame(GroundDiv=NULL, IndCom=NULL, Index=NULL ,Time=NULL, rho=NULL,p=NULL,up=NULL,low=NULL)
   
   for (i in 1:length(div)){
     
@@ -399,10 +399,10 @@ corr<-function(dat,EAindeces,div){
       
       y=dat[,EAindeces[e]]
       
-      z<-corci(x,y,method = "spearman")
+      z<-corci(x,y,method = "spearman",nboot=5000)
       
       Corr_results1<-data.frame(GroundDiv=div[i],IndCom=EAindeces[e], Index=strsplit(EAindeces[e],"_")[[1]][1] ,
-                                Time=strsplit(EAindeces[e],"_")[[1]][2],AggStra=strsplit(EAindeces[e],"_")[[1]][3],
+                                Time=strsplit(EAindeces[e],"_")[[1]][2],
                                 rho=z$estimate,p=z$p.value,up=z$conf.int[2],low=z$conf.int[1])
       
       Corr_results<-rbind(Corr_results,Corr_results1)
@@ -415,63 +415,121 @@ corr<-function(dat,EAindeces,div){
 } 
 
 
+
+
+##################### NULL - average number 
+
+significant_corrs<-data.frame(NULL)
+test<-ALL
+for (i in 1:100){
+  test<-ALL
+  
+  test$Hill_0<-sample(test$Hill_0)
+  test$Hill_1<-sample(test$Hill_1)
+  test$NMDS1<-sample(test$NMDS1)
+  
+  results<-corr(test,EAindeces,div)
+  significant_corrs1<-data.frame(Hill_0=length(results[results$GroundDiv=="Hill_0" & results$p<=0.05,1]),
+                                 Hill_1=length(results[results$GroundDiv=="Hill_1" & results$p<=0.05,1]),
+                                 NMDS1=length(results[results$GroundDiv=="NMDS1" & results$p<=0.05,1]))
+  significant_corrs<-rbind(significant_corrs1,significant_corrs)
+  print(i)
+}
+
+
+
+plot(density(significant_corrs$Hill_0))
+plot(density(significant_corrs$Hill_1))
+
+
+#### All vertebrates
 all.corrs<-corr(ALL,EAindeces,div)
 
+all.corrs[all.corrs$p<=0.05,]
 
-all.corrs[all.corrs$p<0.05,]
-
-#write.csv(all.corrs,"C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/All_verts.csv")
+write.csv(all.corrs,"Spearman_All_verts.csv")
 
 
 
 ################################ Birds #######################
 
 
-birds<-merge(finalDB[,-50],NoAco_div[[5]][1:8,c(2,7,8,9)],by.x="SiteGeneral",by.y="Site")[,-1]
-#names(birds)[1:96]<-replace
+birds<-merge(finalDB,NoAco_div[[5]][1:8,c(3,7,8,11)],by.x="SiteGeneral",by.y="Site")[,-1]
+names(birds)[1:48]<-replace
 EAindeces<-names(birds)[1:48]
 birds.corrs<-corr(birds,EAindeces,div)
 
 birds.corrs[birds.corrs$p<0.05,]
 
-#write.csv(birds.corrs,"C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/Birds.csv")
+write.csv(birds.corrs,"Spearman_Birds.csv")
 
 
 
 ################################ Mammals #######################
-Mammals<-merge(finalDB[,-50],NoAco_div[[4]][1:8,c(2,7,8,9)],by.x="SiteGeneral",by.y="Site")[,-1]
+Mammals<-merge(finalDB,NoAco_div[[4]][1:8,c(3,7,8,11)],by.x="SiteGeneral",by.y="Site")[,-1]
 names(Mammals)[1:48]<-replace
 mammals.corrs<-corr(Mammals,EAindeces,div)
 
 mammals.corrs[mammals.corrs$p<0.05,]
 
-#write.csv(mammals.corrs,"C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/Mammals.csv")
+write.csv(mammals.corrs,"Spearman_Mammals.csv")
 
 
 ###################### Reptiles 
-Reptiles<-merge(finalDB[,-50],NoAco_div[[3]][1:8,c(2,7,8,9)],by.x="SiteGeneral",by.y="Site")[,-1]
+Reptiles<-merge(finalDB,NoAco_div[[3]][1:8,c(3,7,8,11)],by.x="SiteGeneral",by.y="Site")[,-1]
 names(Reptiles)[1:48]<-replace
 
 Reptiles.corrs<-corr(Reptiles,EAindeces,div)
 
 Reptiles.corrs[Reptiles.corrs$p<0.05,]
 
-#write.csv(Reptiles.corrs,"C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/Reptiles.csv")
+write.csv(Reptiles.corrs,"Spearman_Reptiles.csv")
 
 
 ########################## Amphibians
-Amphibians<-merge(finalDB[,-50],NoAco_div[[2]][1:8,c(2,7,8,9)],by.x="SiteGeneral",by.y="Site")[,-1]
+Amphibians<-merge(finalDB,NoAco_div[[2]][1:8,c(3,7,8,11)],by.x="SiteGeneral",by.y="Site")[,-1]
 names(Amphibians)[1:48]<-replace
 
 Amphibians.corrs<-corr( Amphibians,EAindeces,div)
 
 Amphibians.corrs[ Amphibians.corrs$p<0.05,]
 
-#write.csv( Amphibians.corrs,"C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/ Amphibians.csv")
+write.csv( Amphibians.corrs,"Spearman_Amphibians.csv")
 
 #####################################################
 ######################Plot results from significantly correlated indices
 #################################
+
+cints<-function(x){for (i in 1:length(x[,1])){
+  
+  lines(x=x[i,c(2,3)],y=c(x[i,1],x[i,1]),col=x[i,"col"],lwd=1.6)
+  
+  
+}}
+
+dat<-all.corrs[all.corrs$GroundDiv=="Hill_0",]
+dat<-dat[order(dat$IndCom),]
+dat$col<-"darkgrey"
+dat$col[dat$p<=0.05]<-"black"
+dat$ind<-1:48
+
+plot(dat$rho,dat$ind,pch=19, cex=1.5,yaxt="n",col=dat$col,axes=F,xlab="rho",ylab=NA,xlim=c(-1,1))
+axis(1,at=c(-1,-0.5,0,0.5,1))
+cints(dat[,c(10,8,7,9)])
+abline(v=0,lwd=2,lty=2)
+
+
+
+
+
+
+
+
+
+
+
+
+
 dev.off()
 
 par(mfrow=c(1,3),mar=c(4,4,2,2))
