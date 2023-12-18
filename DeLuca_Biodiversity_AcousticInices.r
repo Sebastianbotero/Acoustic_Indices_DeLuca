@@ -268,12 +268,12 @@ M<-cor(H2[,-1])
 corrplot(M, type="lower", order='original',tl.col = "black",
          col=rev(brewer.pal(n=8, name="RdYlBu")))
 
-
+##################################################################
 ################### Ecoacoustic Indexes ######################
+##########################################################
+# Aggregate each index by average of 5 min samples from each recording for temporal bins
 
-# Aggregate each index by average and 90th percentile of 5 min samples from each recording for temporal bins
-
-# Import estimates for each recoridng
+# Import estimates for each recording
 
 Winter<-read.csv("C:/Users/seboc/Box/Ecoacustics_paper/AI_5minWinter_Final_Jan17.csv")
 head(Winter)
@@ -300,7 +300,7 @@ All_AI[All_AI$Site %in% c("AR-7A","AR-7B" ),"SiteGeneral"]<-7
 All_AI[All_AI$Site %in% c("AR-8A","AR-8B", "AR-8A-Jan19-Jan20"),"SiteGeneral"]<-8
 
 
-### Ad the first pca axis as a EA variable
+### Add the first pca axis as a EA variable
 pc <- prcomp(x = All_AI[ , -c(1:7,15,16)],
              center = TRUE, 
              scale. = TRUE)
@@ -310,7 +310,6 @@ summary(pc)
 All_AI$PCA_I<-pc$x[, 1]
 
 #### Time
-
 
 xx<-strsplit(All_AI$Date,"_")
 All_AI$time<-sapply(xx, function(x){x[length(x)]})
@@ -364,95 +363,22 @@ names(finalDB)
 finalDB<-finalDB[,-c(2,11,20,29,38)]
 
 
-######### 10th percentile
-p9<- function (x){
-  
-  return(quantile(x,0.9))
-}
-
-
-AI_season.9<-aggregate( .~  SiteGeneral + Season, data =All_AI_cur_Mstandart[,8:17], FUN=p9)
-
-AI_winter.9<-AI_season.9[AI_season.9$Season=="Winter",]
-names(AI_winter.9)[-1]<-paste(names(AI_winter.9)[-1],"_winter_90p", sep="")
-AI_Spring.9<-AI_season.9[AI_season.9$Season=="Spring",]
-names(AI_Spring.9)[-1]<-paste(names(AI_Spring.9)[-1],"_spring_90p", sep="")
-AI_Summer.9<-AI_season.9[AI_season.9$Season=="Summer",]
-names(AI_Summer.9)[-1]<-paste(names(AI_Summer.9)[-1],"_summer_90p", sep="")
-
-
-AI_TofDay.9<-aggregate( .~  SiteGeneral + TimeofDay, data =All_AI_cur_Mstandart[,c(8:14,16,17,19)],  FUN=p9)
-
-AI_morning.9<-AI_TofDay.9[AI_TofDay.9$TimeofDay=="Morning",]
-names(AI_morning.9)[-1]<-paste(names(AI_morning.9)[-1],"_morning_90p", sep="")
-AI_evening.9<-AI_TofDay.9[AI_TofDay.9$TimeofDay=="Evening",]
-names(AI_evening.9)[-1]<-paste(names(AI_evening.9)[-1],"_evening_90p", sep="")
-
-AI_All.9<-aggregate( .~  SiteGeneral , data =All_AI_cur_Mstandart[,c(8:14,16,17)], FUN=p9)
-names(AI_All.9)[-1]<-paste(names(AI_All.9)[-1], "90p", sep="_")
-
-all.data.9<-list(AI_winter.9,AI_Spring.9,AI_Summer.9,AI_morning.9, AI_evening.9,AI_All.9 )
-
-
-finalDB.9<-all.data.9[[1]]
-
-for (i in 2:6){
-  
-  finalDB.9<-merge(finalDB.9,all.data.9[[i]],by="SiteGeneral")
-  
-  
-}
-
-names(finalDB.9)
-
-finalDB.9<-finalDB.9[,-c(2,11,20,29,38)]
-
-############################################  Check correlation among aggregation strategies
-library(bootcorci)
-finalDB<-cbind(finalDB,finalDB.9)
-names(finalDB)
-
-coor.agg<-data.frame(Index=NULL, Correlation=NULL)
-for (i in 2:49){
-  
-  coor.agg1<-data.frame(Index=names(finalDB)[i], Correlation=cor(finalDB[,i], finalDB[,i+49]))
-  
-  coor.agg<-rbind(coor.agg1,coor.agg)
-  
-  
-}
-
-mean(coor.agg[,2])
-
-
 ############ Merge with non acoustic estimates
-ALL<-merge(finalDB[,-50] ,NoAco_div[[1]][1:8,c(2,7,8,9)], by.x="SiteGeneral", by.y="Site")[,-1]
+ALL<-merge(finalDB ,NoAco_div[[1]][1:8,c(3,7,8,11)], by.x="SiteGeneral", by.y="Site")[,-1]
 
 ornames<-names(ALL)[1:48]
-replace<-c("BIO_winter_avg",       "ACI_winter_avg",       "NDSI_winter_avg",      "ADI_winter_avg",      
-           "AEI_winter_avg",       "H_winter_avg",         "M_winter_avg",         "PCAI_winter_avg",    
-           "BIO_spring_avg",       "ACI_spring_avg",       "NDSI_spring_avg",      "ADI_spring_avg",      
-           "AEI_spring_avg",       "H_spring_avg",         "M_spring_avg",         "PCAI_spring_avg",    
-           "BIO_summer_avg",       "ACI_summer_avg",       "NDSI_summer_avg",      "ADI_summer_avg",      
-           "AEI_summer_avg",       "H_summer_avg",         "M_summer_avg",         "PCAI_summer_avg",    
-           "BIO_morning_avg",      "ACI_morning_avg",      "NDSI_morning_avg",     "ADI_morning_avg",     
-           "AEI_morning_avg",      "H_morning_avg",        "M_morning_avg",        "PCAI_morning_avg",   
-           "BIO_evening_avg",      "ACI_evening_avg",      "NDSI_evening",     "ADI_evening_avg",     
-           "AEI_evening_avg",      "H_evening_avg",        "M_evening_avg",        "PCAI_evening_avg",   
-           "BIO_all_avg",              "ACI_all_avg",              "NDSI_all_avg",             "ADI_all_avg",             
-           "AEI_all_avg",              "H_all_avg",                "M_all_avg",                "PCAI_all_avg",           
-           "BIO_winter_90p",   "ACI_winter_90p",   "NDSI_winter_90p",  "ADI_winter_90p",  
-           "AEI_winter_90p",   "H_winter_90p",     "M_winter_90p",     "PCAI_winter_90p",
-           "BIO_spring_90p",   "ACI_spring_90p",   "NDSI_spring_90p",  "ADI_spring_90p",  
-           "AEI_spring_90p",   "H_spring_90p",     "M_spring_90p",     "PCAI_spring_90p",
-           "BIO_summer_90p",   "ACI_summer_90p",   "NDSI_summer_90p",  "ADI_summer_90p",  
-           "AEI_summer_90p",   "H_summer_90p",     "M_summer_90p",     "PCAI_summer_90p",
-           "BIO_morning_90p",  "ACI_morning_90p",  "NDSI_morning_90p", "ADI_morning_90p", 
-           "AEI_morning_90p",  "H_morning_90p",    "M_morning_90p",    "PCAI_morning_90p",
-           "BIO_evening_90p",  "ACI_evening_90p",  "NDSI_evening_90p", "ADI_evening_90p", 
-           "AEI_evening_90p",  "H_evening_90p",    "M_evening_90p",    "PCAI_evening_90p",
-           "BIO_all_90p",          "ACI_all_90p",          "NDSI_all_90p",         "ADI_all_90p",         
-           "AEI_all_90p",          "H_all_90p",            "M_all_90p",            "PCAI_all_90p")[1:48]
+replace<-c("BIO_winter",       "ACI_winter",       "NDSI_winter",      "ADI_winter",      
+           "AEI_winter",       "H_winter",         "M_winter",         "PCAI_winter",    
+           "BIO_spring",       "ACI_spring",       "NDSI_spring",      "ADI_spring",      
+           "AEI_spring",       "H_spring",         "M_spring",         "PCAI_spring",    
+           "BIO_summer",       "ACI_summer",       "NDSI_summer",      "ADI_summer",      
+           "AEI_summer",       "H_summer",         "M_summer",         "PCAI_summer",    
+           "BIO_morning",      "ACI_morning",      "NDSI_morning",     "ADI_morning",     
+           "AEI_morning",      "H_morning",        "M_morning",        "PCAI_morning",   
+           "BIO_evening",      "ACI_evening",      "NDSI_evening",     "ADI_evening",     
+           "AEI_evening",      "H_evening",        "M_evening",        "PCAI_evening",   
+           "BIO_all", "ACI_all",  "NDSI_all",             "ADI_all",             
+           "AEI_all", "H_all","M_all",                "PCAI_all")
 
 
 
@@ -460,19 +386,7 @@ replace<-c("BIO_winter_avg",       "ACI_winter_avg",       "NDSI_winter_avg",   
 names(ALL)[1:48]<-replace
 EAindeces<-replace
 
-comm1<-dcast(data=All.verts, Site ~ Species, value.var= "N_individuals", fun.aggregate=sum)
-comm<-as.matrix(comm1[-c(1,10,11),-1])
-row.names(comm)<-comm1$Site[-c(1,10,11)]
-names(comm)<-names(comm1[-1])
-
-Commdist<-vegdist(wisconsin(comm),"horn")
-Commclus <- hclust(Commdist, "average")
-
-NMDS=metaMDS(wisconsin(comm),trymax=100)
-nmdsAxis<-scores(NMDS)
-ALL$NMDS1<-nmdsAxis$sites[,1]
-ALL$NMDS2<-nmdsAxis$sites[,2]
-div<-c("Hill_0" , "Hill_1", "NMDS1","NMDS2")
+div<-c("Hill_0" , "Hill_1", "NMDS1")
 
 corr<-function(dat,EAindeces,div){
   Corr_results<-data.frame(GroundDiv=NULL, IndCom=NULL, Index=NULL ,Time=NULL,AggStra=NULL, rho=NULL,p=NULL,up=NULL,low=NULL)
