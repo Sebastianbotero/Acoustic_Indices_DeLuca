@@ -513,13 +513,13 @@ dat$col<-"darkgrey"
 dat$col[dat$p<=0.05]<-"black"
 dat$ind<-1:48
 
-plot(dat$rho,dat$ind,pch=19, cex=1.5,yaxt="n",col=dat$col,axes=F,xlab="rho",ylab=NA,xlim=c(-1,1))
+plot(dat$rho,dat$ind,pch=19, cex=1.5,col=dat$col,axes=F,xlab="rho",ylab=NA,xlim=c(-1,1))
 axis(1,at=c(-1,-0.5,0,0.5,1))
 cints(dat[,c(10,8,7,9)])
 abline(v=0,lwd=2,lty=2)
 
 
-
+axis(2,1:48, labels=dat$Time,lwd=0, tick = TRUE,cex=0.5,srt = 35)
 
 
 
