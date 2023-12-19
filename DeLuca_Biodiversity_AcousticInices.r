@@ -459,7 +459,7 @@ names(birds)[1:48]<-replace
 EAindeces<-names(birds)[1:48]
 birds.corrs<-corr(birds,EAindeces,div)
 
-birds.corrs[birds.corrs$p<0.05,]
+birds.corrs[birds.corrs$p<0.06,]
 
 write.csv(birds.corrs,"Spearman_Birds.csv")
 
@@ -497,40 +497,125 @@ Amphibians.corrs[ Amphibians.corrs$p<0.05,]
 write.csv( Amphibians.corrs,"Spearman_Amphibians.csv")
 
 #####################################################
-######################Plot results from significantly correlated indices
+######################Plot results  -forest plot
 #################################
 
-cints<-function(x){for (i in 1:length(x[,1])){
+#Function to plot confidence intervals
+cints<-function(x,ind,col){for (i in 1:length(x[,1])){
   
-  lines(x=x[i,c(2,3)],y=c(x[i,1],x[i,1]),col=x[i,"col"],lwd=1.6)
+  lines(x=x[i,c("low","up")],y=(c(x[i,"ind"],x[i,"ind"])*5)+ind,col= yarrr::transparent(col, trans.val = x[i,"col"]),lwd=1.8)
   
   
 }}
 
-dat<-all.corrs[all.corrs$GroundDiv=="Hill_0",]
-dat<-dat[order(dat$IndCom),]
-dat$col<-"darkgrey"
-dat$col[dat$p<=0.05]<-"black"
-dat$ind<-1:48
+#Function to create plots
+forestplot<-function(corr.results,file){
+  
+  tiff(file=file,
+       width=8.8, height=11.326, units="in", res=1000)
+  
+  
+  
+  corr.results$col<-0.65
+  corr.results$col[corr.results$p<=0.05]<-0.1
+  corr.results$font<-1
+  corr.results$font[corr.results$p<=0.05]<-2
+  corr.results<-corr.results[order(corr.results$IndCom),]
+  
+  indices<-data.frame(ind=unique(corr.results$Index),font=1)
+  indices$font[indices$ind %in% corr.results$Index[corr.results$p <= 0.05]]  <-2
+  
+  
+  
+  dat<-corr.results[corr.results$GroundDiv=="Hill_0",]
+  dat<-dat[order(dat$IndCom),]
+  dat$ind<-48:1
+  
+  
+  dat1<-corr.results[corr.results$GroundDiv=="Hill_1",]
+  dat1<-dat1[order(dat1$IndCom),]
+  dat1$ind<-48:1
+  
+  dat2<-corr.results[corr.results$GroundDiv=="NMDS1",]
+  dat2<-dat2[order(dat2$IndCom),]
+  dat2$ind<-48:1
+  
+  dat$font<-1
+  dat$font[dat$p <=0.05 | dat1$p <=0.05 | dat2$p <=0.05 ] <- 2
+  
+  
+  
+  layout(matrix(c(1,2,2,3,3), nrow = 1, ncol = 5, byrow = TRUE))
+  par(oma=c(0,0,2,0),mai=c(0.5, 0, 0.4, 0))
+  plot.new()
+  plot.window(ylim=c(1,240), xlim=c(0,1),oma=c(0,0,0,0),mar=c(0,0,0,0))
+  text(y=c(3,9,15,21,27,33,39,45)*5, x=0.25,labels=rev(indices$ind),font=rev(indices$font), cex=3)
+  text(y=rev(seq(5,240,by=5)),  x=0.9,labels=dat$Time,font=dat$font,cex=1.2,srt = 35, pos = 2, xpd = TRUE)
+  
+  par(mai=c(0.6, 0, 0.4, 0))
+  plot.window(xlim=c(-1,1), ylim=c(1,144))
+  plot(dat$rho,dat$ind*5,pch=19, cex=1.8,cex.main=2, main= "Diversity",col="purple",axes=F,xlab="rho",cex.lab=2,ylab=NA,xlim=c(-1,1))
+  axis(1, at=c(-1,-0.5,0,0.5,1),cex.axis=1.5)
+  cints(dat,0,"purple")
+  abline(v=0,lwd=2,lty=2)
+  axis(2,seq(5,240,by=5), labels=NA, tick = TRUE)
+  
+  
+  
+  points(dat1$rho,(dat1$ind*5)+1,pch=19, cex=1.8,col="darkgreen")
+  cints(dat1,1,"darkgreen")
+  
+  par(mai=c(0.6, 0.2, 0.4, 0))
+  plot.window(xlim=c(-1,1), ylim=c(1,144))
+  plot(dat2$rho,dat2$ind*5,pch=19, cex=1.8, cex.main=2,main= "Composition",col="black",axes=F,xlab="rho",cex.lab=2,ylab=NA,xlim=c(-1,1))
+  axis(1, at=c(-1,-0.5,0,0.5,1),cex.axis=1.5)
+  cints(dat2,0,"black")
+  abline(v=0,lwd=2,lty=2)
+  
+  
+  
+  dev.off()
+}
 
-plot(dat$rho,dat$ind,pch=19, cex=1.5,col=dat$col,axes=F,xlab="rho",ylab=NA,xlim=c(-1,1))
-axis(1,at=c(-1,-0.5,0,0.5,1))
-cints(dat[,c(10,8,7,9)])
-abline(v=0,lwd=2,lty=2)
 
 
-axis(2,1:48, labels=dat$Time,lwd=0, tick = TRUE,cex=0.5,srt = 35)
+######### Plot correlations for all vertebrates
 
-
+all.verts<-read.csv("Spearman_All_verts.csv")
+forestplot(corr.results=all.verts, file="Vertebrate_Community.tif")
 
 
 
+######### Plot correlations for Birds
+
+Birds<-read.csv("Spearman_Birds.csv")
+forestplot(corr.results=Birds, file="Birds.tif")
+
+
+######### Plot correlations for Amphibians
+
+Amphibians<-read.csv("Spearman_Amphibians.csv")
+forestplot(corr.results=Amphibians, file="Amphibians.tif")
+
+
+######### Plot correlations for Reptiles
+
+Reptiles<-read.csv("Spearman_Reptiles.csv")
+forestplot(corr.results=Reptiles, file="Reptiles.tif")
+
+######### Plot correlations for Mammals
+
+Mammals<-read.csv("Spearman_Mammals.csv")
+forestplot(corr.results=Mammals, file="Mammals.tif")
 
 
 
 
 
-dev.off()
+
+
+
+
 
 par(mfrow=c(1,3),mar=c(4,4,2,2))
 setwd("C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/")
