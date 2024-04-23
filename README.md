@@ -12,3 +12,5 @@ Contents:
 - The cvs files starting with AI_5min contain the ecoacoustic indices estimated for every 5 minutes sample for each recorder.
 - The cvs files starting with Spearman contain the estimated correlations among ground-truthed diversity and the ecoacoustic indices for each taxon.
 - DeLuca_Biodiversity_AcousticInices.r contains the script used to perform the analyses.
+
+If you have any questions, please contact me at sebastian.botero@ufl.edu
