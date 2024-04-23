@@ -218,7 +218,11 @@ for (i in 1:5){
 
 
 ########## Correlation among groups
-par(mfrow=c(1,3))
+tiff(file="Correlation_Spearman_Apr21_50mBirds.tif",
+     width=11.326, height=8.8, units="in", res=1000)
+
+layout(matrix(c(1,2,3), nrow = 1, ncol = 3, byrow = TRUE))
+par(oma=c(0,0,2,0),mai=c(0.5, 0, 0.1, 0),mgp=c(1,1,0))
 ## Hill 0
 
 H0<-NoAco_div[[1]][1:8,c(7,3)]
@@ -232,10 +236,36 @@ for (i in 2:5) {
   
 }
 
-M<-cor(H0[,-1])
-corrplot(M, type="lower", order='original',tl.col = "black",
-         col=rev(brewer.pal(n=8, name="RdYlBu")))
 
+
+
+
+
+corrtax<-function(H) {
+  
+  M<-matrix(nrow=5,ncol=5)
+  row.names(M)<-names(H0[,-1])
+  colnames(M)<-names(H0[,-1])
+  M.p<-M
+  for (i in 1:5){
+    for (e in 1:5){
+      corr<-corci(H[,names(H)[i]],H[,names(H)[e]],method = "spearman",nboot=5000)
+      M[i,e] <-corr$estimate
+      M.p[i,e] <-corr$p.value
+    }
+    
+  }
+  return(list(correlation=M,pval=M.p))
+  }
+
+
+Hill0<-corrtax(H0[,-1])
+
+#testRes = cor.mtest(H0[,-1], conf.level = 0.95,method="spearman")
+#M<-cor(H0[,-1], method="spearman")
+corrplot(Hill0$correlation, type="lower", order='original',tl.col = "black",tl.cex=1.3,cl.cex=1.1,
+         col=rev(brewer.pal(n=8, name="RdYlBu"))) #, p.mat = Hill0$pval, sig.level = 0.05,insig='label_sig')
+text(2,8,"Species richness", adj=c(0.5,1),cex=1.9, font=2)
 
 H1<-NoAco_div[[1]][1:8,c(8,3)]
 names(H1)[1]<-names(NoAco_div)[1]
@@ -248,25 +278,36 @@ for (i in 2:5) {
   
 }
 
-M<-cor(H1[,-1])
-corrplot(M, type="lower", order='original',tl.col = "black",
-         col=rev(brewer.pal(n=8, name="RdYlBu")))
+#M<-cor(H1[,-1],method="spearman")
+#testRes = cor.mtest(H1[,-1], conf.level = 0.95,method="spearman")
+Hill1<-corrtax(H1[,-1])
+
+corrplot(Hill1$correlation, type="lower", order='original',tl.col = "black",tl.cex=1.3,cl.cex=1.1,
+         col=rev(brewer.pal(n=8, name="RdYlBu"))) #, p.mat = Hill1$pval, sig.level = 0.05,insig='label_sig')
+text(2,8,"Shannon's div.", adj=c(0.5,1),cex=1.9, font=2)
 
 
-H2<-NoAco_div[[1]][1:8,c(9,3)]
+
+H2<-NoAco_div[[1]][1:8,c(11,3)]
+
 names(H2)[1]<-names(NoAco_div)[1]
 
 for (i in 2:5) {
-  H2a<-NoAco_div[[i]][1:8,c(9,3)]
+  H2a<-NoAco_div[[i]][1:8,c(11,3)]
   names(H2a)[1]<-names(NoAco_div)[i]
   H2<-merge(H2,H2a, by="Site")
   
   
 }
 
-M<-cor(H2[,-1])
-corrplot(M, type="lower", order='original',tl.col = "black",
-         col=rev(brewer.pal(n=8, name="RdYlBu")))
+#M<-cor(H2[,-1],method="spearman")
+#testRes = cor.mtest(H1[,-1], conf.level = 0.95,method="spearman")
+
+nmds<-corrtax(H2[,-1])
+corrplot(nmds$correlation, type="lower", order='original',tl.col = "black",tl.cex=1.3,cl.cex=1.1,
+         col=rev(brewer.pal(n=8, name="RdYlBu")))#, p.mat = nmds$pval, sig.level = 0.005,insig='label_sig')
+text(2,8,"NMDS I", adj=c(0.5,1),cex=1.9, font=2)
+dev.off()
 
 ##################################################################
 ################### Ecoacoustic Indexes ######################
@@ -388,9 +429,12 @@ EAindeces<-replace
 
 div<-c("Hill_0" , "Hill_1", "NMDS1")
 
+### Fuction for assessing correlation
+
 corr<-function(dat,EAindeces,div){
-  Corr_results<-data.frame(GroundDiv=NULL, IndCom=NULL, Index=NULL ,Time=NULL, rho=NULL,p=NULL,up=NULL,low=NULL)
-  
+  Corr_results<-data.frame(GroundDiv=NULL, IndCom=NULL, Index=NULL ,Time=NULL, rho=NULL,p=NULL,up=NULL,low=NULL, lm_beta=NULL,lm_pval=NULL,lm_rsq=NULL)
+  ctrl <- trainControl(method = "LOOCV", number = 8)
+  fm<-as.formula( "x~.")
   for (i in 1:length(div)){
     
     x<-dat[,div[i]]
@@ -401,9 +445,15 @@ corr<-function(dat,EAindeces,div){
       
       z<-corci(x,y,method = "spearman",nboot=5000)
       
+      
+      
+      mod<-lm(fm, data=data.frame(x,y))
+      model <- train(fm, data=data.frame(x,y), method = "lm", trControl = ctrl)
+      
+      
       Corr_results1<-data.frame(GroundDiv=div[i],IndCom=EAindeces[e], Index=strsplit(EAindeces[e],"_")[[1]][1] ,
                                 Time=strsplit(EAindeces[e],"_")[[1]][2],
-                                rho=z$estimate,p=z$p.value,up=z$conf.int[2],low=z$conf.int[1])
+                                rho=z$estimate,p=z$p.value,up=z$conf.int[2],low=z$conf.int[1],lm_beta=summary(mod)$coefficients[2,1],lm_pval=summary(mod)$coefficients[2,4],lm_rsq=model$results$Rsquared)
       
       Corr_results<-rbind(Corr_results,Corr_results1)
     }
@@ -417,29 +467,7 @@ corr<-function(dat,EAindeces,div){
 
 
 
-##################### NULL - average number 
 
-significant_corrs<-data.frame(NULL)
-test<-ALL
-for (i in 1:100){
-  test<-ALL
-  
-  test$Hill_0<-sample(test$Hill_0)
-  test$Hill_1<-sample(test$Hill_1)
-  test$NMDS1<-sample(test$NMDS1)
-  
-  results<-corr(test,EAindeces,div)
-  significant_corrs1<-data.frame(Hill_0=length(results[results$GroundDiv=="Hill_0" & results$p<=0.05,1]),
-                                 Hill_1=length(results[results$GroundDiv=="Hill_1" & results$p<=0.05,1]),
-                                 NMDS1=length(results[results$GroundDiv=="NMDS1" & results$p<=0.05,1]))
-  significant_corrs<-rbind(significant_corrs1,significant_corrs)
-  print(i)
-}
-
-
-
-plot(density(significant_corrs$Hill_0))
-plot(density(significant_corrs$Hill_1))
 
 
 #### All vertebrates
@@ -613,54 +641,6 @@ forestplot(corr.results=Mammals, file="Mammals.tif")
 
 
 
-
-
-
-
-par(mfrow=c(1,3),mar=c(4,4,2,2))
-setwd("C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/")
-f<-list.files("C:/Users/seboc/Box/Ecoacustics_paper/Spearman_correlation/")
-
-for(i in 1:5){
-  x<-read.csv(f[i])
-  x$Time<-as.factor(x$Time)
-  mycols <-c("Gray","Dark Slate Gray","Papaya Whip","Green Yellow","Gold","Steel Blue")
-  
-  x1<-x[x$p<=0.05 & x$GroundDiv=="Hill_1",]
-  
-  counts <- table(x1$Index)
-  barplot(counts)
-  
-  counts <- as.data.frame(table(x1$Time))
-  counts$Var1<-as.factor(counts$Var1)
-  counts<-counts[counts$Freq>0,]
-  barplot(counts$Freq,names.arg=counts$Var1,col=mycols[counts$Var1])
-  
-  mycols1<-c("orangered","blue3")
-  counts <- as.data.frame(table(x1$AggStra))
-  counts$Var1<-as.factor(counts$Var1)
-  counts<-counts[counts$Freq>0,]
-  barplot(counts$Freq,names.arg=counts$Var1,col=mycols1[counts$Var1]) 
-  
-  title(f[i])
-}
-
-
-
-##write.csv(results,"C:/Users/seboc/Box/Ecoacustics_paper/Final_analyses_2023/Best_Models.csv")
-
-results<-read.csv("C:/Users/seboc/Box/Ecoacustics_paper/Final_analyses_2023/Best_Models.csv")
-#table(results$Model)
-#table(sapply(strsplit(results$Model, "_"),"[[",1))
-
-#timeagg<-c()
-#for (i in 1:length(results$Model)){
-
-# x<-strsplit(results$Model[i], "_")
-# if (is.na(x[[1]][2])) {timeagg[i]<-"All"} else {timeagg[i]<-x[[1]][2]}
-
-#}
-#table(timeagg)
 
 
 #################### Plot Best Models ########################
@@ -939,135 +919,3 @@ mtext(side=2,"Mammals",1, adj=0.1,outer = TRUE, cex = 1.8)
 mtext(side=2,"Effective number of species",5, adj=0.8,outer = TRUE, cex = 2)
 
 
-
-####################################################################
-#################################################################
-################ Community composition and AIs #############
-#######################################################
-
-### Community composition
-library(vegan)
-library(ade4)
-library(reshape2)
-
-
-
-######### All verts
-
-comm1<-dcast(data=All.verts, Site ~ Species, value.var= "N_individuals", fun.aggregate=sum)
-comm<-as.matrix(comm1[-c(1,10,11),-1])
-row.names(comm)<-paste("Site",comm1$Site[-c(1,10,11)], sep="")
-names(comm)<-names(comm1[-1])
-
-Commdist<-vegdist(wisconsin(comm),"horn")
-Commclus <- hclust(Commdist, "average")
-
-
-
-NMDS=metaMDS(wisconsin(comm),trymax=100)
-stressplot(NMDS)
-
-
-col<- c("darkgreen","darkgreen","yellow","yellow", "brown", "brown", "navyblue", "navyblue") 
-ordiplot(NMDS,type="n")
-orditorp(NMDS,display="species",col="red",air=0.01)
-orditorp(NMDS, display="sites",col=col,pch=19,
-         air=0.1 ,cex=1.5)
-
-nmdsAxis<-scores(NMDS)
-ALL$NMDS1<-nmdsAxis$sites[,1]
-ALL$NMDS2<-nmdsAxis$sites[,2]
-## Index similarity Average
-AIdist<-dist(finalDB[,-1])
-AIclus <- hclust(AIdist, "average")
-
-plot(Commdist,AIdist)
-abline(lm(AIdist ~ Commdist))
-
-mantel.rtest(AIdist, Commdist, nrepet = 9999)
-## Index similarity 10th percentile
-
-head(finalDB.9)
-AIdist<-dist(finalDB.9[,-1])
-AIclus <- hclust(AIdist, "average")
-
-plot(Commdist,AIdist)
-abline(lm(AIdist ~ Commdist))
-
-mantel.rtest(AIdist, Commdist, nrepet = 9999)
-
-par(mfrow=c(1,2))
-plot(AIclus ) 
-plot(Commclus) 
-
-
-###############  Do this for all communities
-
-vert.data<-list(All.verts,birds,Amphibians, Reptiles,CTind)
-names(vert.data)<-c("Vertebrates", "Birds","Amphibians","Reptiles","Mammals")
-
-AIdist_avg<-dist(finalDB[,-1])
-AIdist_90th<-dist(finalDB.9[,-1])
-
-community.results<-data.frame(Taxa=NULL,Avg.Simm=NULL,Mantel_Avg=NULL, Mantel_90th=NULL)
-
-layout_mat <- matrix(c(1, 1, 2, 3,4,5), nrow = 3, ncol = 2,
-                     byrow = TRUE)
-
-layout(mat = layout_mat)
-
-for (i in 1:length(vert.data)){
-  
-  comm1<-dcast(data=vert.data[[i]], Site ~ Species, value.var= "N_individuals", fun.aggregate=sum)
-  comm1<-comm1[comm1$Site %in% c("1" ,"2","3","4","5", "6" ,"7","8"),]
-  comm<-as.matrix(comm1[order(comm1$Site),-1])
-  row.names(comm)<-order(comm1$Site)
-  names(comm)<-names(comm1[-1])
-  
-  Commdist<-vegdist(wisconsin(comm),"horn")
-  
-  mantel_avg<-mantel.rtest(AIdist_avg, Commdist, nrepet = 9999)
-  mantel_90th<-mantel.rtest(AIdist_90th, Commdist, nrepet = 9999)
-  
-  par(mgp=c(2,1,0), tcl=-0.5, family="serif",mar=c(5,3.5,0,0))
-  
-  
-  plot(AIdist_avg, Commdist, xlab= "", pch=19, cex.axis=1.8,cex.lab=2, ylab=NA)
-  title(xlab = names(vert.data)[i], line = 3.5,cex.lab=1.8) 
-  mod<-lm(Commdist~AIdist_avg)
-  newx <- seq(200, 1100, length.out=500)
-  preds <- as.data.frame(predict(mod, newdata = data.frame(AIdist_avg=newx), interval = 'confidence'))
-  
-  #add dashed lines for confidence bands
-  lines(newx, preds[ ,1], lty = 1,lwd=3, col = 'blue')
-  lines(newx, preds[ ,3], lty = 'dashed', col = 'blue')
-  lines(newx, preds[ ,2], lty = 'dashed', col = 'blue')
-  points(AIdist_avg, Commdist, xlab= "", pch=19, cex=1.8)
-  
-  community.results1<-data.frame(Taxa=names(vert.data)[i],Avg.Simm=mean(Commdist),
-                                 Mantel_Avg=mantel_avg$pvalue, Mantel_90th=mantel_90th$pvalue)
-  
-  community.results<-rbind(community.results, community.results1)
-}
-
-mtext(side=1,"Soundscape dissimilarity",1, adj=0.55,outer = TRUE, cex = 1.7)
-mtext(side=2,"Community dissimilarity",1, adj=0.6,outer = TRUE, cex = 1.7)
-
-#write.csv(community.results,"C:/Users/seboc/Box/Ecoacustics_paper/Commuty_Mante.csv")
-
-########### Check Reptiles (i = 4)
-i=4
-comm1<-dcast(data=vert.data[[i]], Site ~ Species, value.var= "N_individuals", fun.aggregate=sum)
-comm1<-comm1[comm1$Site %in% c("1" ,"2","3","4","5", "6" ,"7","8"),]
-comm<-as.matrix(comm1[order(comm1$Site),-1])
-row.names(comm)<-order(comm1$Site)
-names(comm)<-names(comm1[-1])
-
-Commdist<-vegdist(wisconsin(comm),"horn")
-Commclus <- hclust(Commdist, "average")
-
-AIclus <- hclust(AIdist_avg, "average")
-
-par(mfrow=c(1,2))
-plot(AIclus ) 
-plot(Commclus) 
