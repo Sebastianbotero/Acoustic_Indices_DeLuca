@@ -1,4 +1,4 @@
-Acoustic indices track local vertebrate biodiversity in a subtropical landscape.
+##Acoustic indices track local vertebrate biodiversity in a subtropical landscape.
 
 Sebastian Botero-Cañola1; Kristen Wilson1; Elizabeth Garcia1; Madison Heisey1; Lawrence E. Reeves2; Nathan D. Burkett-Cadena2; Christina Romagosa1; Kathryn E. Sieving1; Samantha M. Wisely1
 1- Wildlife Ecology and Conservation Department. University of Florida – Gainesville, FL 32611. USA
