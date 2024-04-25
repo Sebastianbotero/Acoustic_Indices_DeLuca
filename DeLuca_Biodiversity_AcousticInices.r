@@ -8,7 +8,7 @@ library(corrplot)
 library(RColorBrewer)
 
 
-################ EFunction to estimate biodiversity at a determined sampling converge
+################ Function used to estimate biodiversity at a determined sampling converge
 
 
 biod.calc<-function(x,dates,SC){
@@ -69,118 +69,7 @@ biod.calc<-function(x,dates,SC){
   return(results)
 }
 
-################### Dates for each season
 
-
-dates<-data.frame(season=c("ALL","Winter","Spring","Summer"),ini=as.Date(c("Jan_1_2022","Jan_1_2022","Mar_20_2022","June_21_2022"),
-                                                                         format='%b_%d_%Y'),end=as.Date(c("Aug_30_2022","Mar_20_2022","June_21_2022","Aug_30_2022"),
-                                                                                                        format='%b_%d_%Y'))
-################################################################
-################## Bird diversity by site x season ##############
-##################################################################
-birds<-read.csv("C://Users//seboc//Box//DeLuca//All_Bird_Data_SciNames.csv")
-head(birds)
-birds$Date<-paste(birds$Date,"2022", sep="_")
-birds$Date<-as.Date(birds$Date,format='%b_%d_%Y')
-birds<-birds[birds$Estimate_Method=="Abundance",] # only use abundance method
-names(birds)[9]<-"N_individuals"
-
-mean(c(0.9745,0.9745,0.9899,0.9812,0.9706,0.9872,0.9742,0.9590)) ## We will compare biodiversity estimates for each site at the mean sampling coverage (SC)
-Birds<-biod.calc(x=birds,dates=dates,SC=0.976)
-
-write.csv(Birds,"Bird_Diversity.csv")
-
-
-
-
-################################################################
-################## Herps diversity by site x season ##############
-##################################################################
-HerpsD<-read.csv("C:/Users/seboc/Box/DeLuca/Final_Databases/Drift_Fence_Herps.csv")
-HerpsD$N_individuals<-1
-HerpsV<-read.csv("C:/Users/seboc/Box/DeLuca/Final_Databases/Visual_Herps.csv")
-HerpsV$Species<-HerpsV$SPECIES
-head(HerpsD)
-head(HerpsV)
-
-Herps<-rbind(HerpsD[,c(5,6,8,9,20)],HerpsV[,c(2,6,13,8,11)])
-head(Herps)
-Herps$Date<-paste(Herps$Date,"2022", sep="_")
-Herps$Date<-as.Date(Herps$Date,format='%b_%d_%Y')
-Herps<-Herps[Herps$Site %in% c("1","2","3","4","5","6","7","8"),]
-Herps$Site<-as.numeric(Herps$Site)
-
-Amphibians<-Herps[Herps$Class=="Amphibia",]
-unique(Amphibians$Species)
-
-
-Reptiles<-Herps[Herps$Class=="Reptiles",]
-unique(Reptiles$Species)
-
-
-mean(c(1,0.85,1,1,0.95,0.96,0.96))
-Amphibia<-biod.calc(x=Amphibians,dates=dates,SC=0.96)
-write.csv(Amphibia,"Amphibians_Diversity.csv")
-
-
-mean(c(0.902,0.96,0.94,0.95,0.86,0.93,0.86,0.89))
-Rep<-biod.calc(x=Reptiles,dates=dates,SC=0.91)
-write.csv(Rep,"Reptiles_Diversity.csv")
-
-#########################################################################################################################
-############################  Mammals ###################################################################################
-################################################################################################################
-
-CTs<-read.csv("C:/Users/seboc/Box/DeLuca/Final_Databases/Camera_trapping_NoHumanact/images.csv")
-head(CTs)
-CTs<-CTs[CTs$is_blank==0,]
-CTs<-CTs[CTs$class=="Mammalia",]
-CTs$Species<-paste(CTs$genus, CTs$species, sep=" ")
-CTs<-CTs[!CTs$species=="",]
-CTs<-CTs[!CTs$Species %in% c(  "Bos taurus", "Equus caballus" ,"Canis familiaris" ,"Sigmodon hispidus"),]
-CTs<-CTs[CTs$Site %in% 1:8,]
-CTs$Date<-as.Date(CTs$timestamp,format='%m/%d/%Y')
-
-##### asume records to be independent per day
-#CTind<-aggregate(number_of_objects ~ Species, data =CTs, sum)
-CTind<-aggregate(number_of_objects ~ Species + Site + Date, data =CTs, max)
-names(CTind)[4]<-"N_individuals"
-
-mean(c(1,1,0.99,1,1,0.98,1,0.99))
-Mammals<-biod.calc(x=CTind,dates=dates,SC=0.99)
-write.csv(Mammals,"MammalsCT_Diversity.csv")
-
-
-
-
-#########################################################################################################################
-############################  Small terrestrial mammals ###################################################################################
-################################################################################################################
-
-
-STM<-read.csv("C:/Users/seboc/Box/DeLuca/Final_Databases/Mammal_trapping.csv")
-head(STM)
-STM<-STM[!STM$Species %in% c(NA,"Spilogale putorius"),]
-STM$Date<-as.Date(STM$Date,format='%b_%d_%Y')
-STM$N_individuals<-1
-#STM<-aggregate(N_individuals ~ Species, data =STM, sum)
-S.Mammals<-biod.calc(x=STM,dates=dates,SC=0.99)
-write.csv(S.Mammals,"Small_Mammals_Diversity.csv")
-
-
-#########################################################################################################################
-############################  All groups ###################################################################################
-################################################################################################################
-
-
-All.verts<-rbind(birds[,c("Date","Site", "Species", "N_individuals")],Herps[,c("Date","Site", "Species", "N_individuals")],
-                 CTind[,c("Date","Site", "Species", "N_individuals")])
-head(All.verts)
-dim(All.verts)
-
-mean(c(0.99,0.98,0.99,0.99,0.97,0.98,0.98,0.97))
-all.biod<-biod.calc(x=All.verts,dates=dates,SC=0.98)
-write.csv(all.biod,"All_verts_Diversity.csv")
 
 
 ########################  Explore diversity among sites
